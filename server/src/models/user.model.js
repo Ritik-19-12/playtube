@@ -1,8 +1,9 @@
 import mongoose, { Schema } from "mongoose";
 
-import { Jwt } from "jsonwebtoken";
-import { bcrypt } from "bcrypt";
+import jsonwebtoken from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
+console.log("Loading latest user.model.js");
 const UserSchema = new Schema(
   {
     username: {
@@ -52,18 +53,18 @@ const UserSchema = new Schema(
   }
 );
 
-UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = bcrypt.hash(this.password, 10);
-  next();
+UserSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+
+  this.password = await bcrypt.hash(this.password, 10);
 });
 
-UserSchema.method.isPasswordCorrect = async function (password) {
+UserSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
 UserSchema.methods.generateAccessToken = function () {
-  jwt.sign(
+  return jsonwebtoken.sign(
     {
       _id: this._id,
       email: this.email,
@@ -77,7 +78,7 @@ UserSchema.methods.generateAccessToken = function () {
   );
 };
 UserSchema.methods.generateRefreshToken = function () {
-  jwt.sign(
+  return jsonwebtoken.sign(
     {
       _id: this._id,
     },
@@ -88,4 +89,4 @@ UserSchema.methods.generateRefreshToken = function () {
   );
 };
 
-export const user = mongoose.model("User", UserSchema);
+export const User = mongoose.model("User", UserSchema);
