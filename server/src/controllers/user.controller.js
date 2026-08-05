@@ -222,7 +222,7 @@ const changeCurrentpassword = asyncHandler(async (req, res) => {
 const getUserProfile = asyncHandler(async (req, res) => {
   return res
     .status(200)
-    .json(200, req.user, "User profile fetched successfully");
+    .json(new ApiResponse(200, req.user, "User profile fetched successfully"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
