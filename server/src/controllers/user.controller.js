@@ -4,7 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-import { use } from "react";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -65,7 +65,7 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   const createdUser = await User.findById(user._id).select(
-    "-password -RefreshToken"
+    "-password -refreshToken"
   );
 
   if (!createdUser) {
@@ -102,11 +102,11 @@ const loginUser = asyncHandler(async (req, res) => {
     user._id
   );
 
-  const islogged = await User.findById(user._id).select(
-    "-password -RefreshToken"
+  const currentUser = await User.findById(user._id).select(
+    "-password -refreshToken"
   );
 
-  if (!islogged) {
+  if (!currentUser) {
     throw new ApiError(500, "Something went wrong while logging in the user");
   }
   const options = {
@@ -122,7 +122,7 @@ const loginUser = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         {
-          user: islogged,
+          user: currentUser,
           accessToken,
           refreshToken,
         },
@@ -160,7 +160,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Refresh token is required");
   }
-
+ console.log("Incoming Refresh Token:", incomingRefreshToken);
   try {
     const decodedToken = jwt.verify(
       incomingRefreshToken,
@@ -228,7 +228,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { fullname, username, email } = req.body;
 
-  if (!fullname || !username || !email) {
+  if ([fullname, username, email].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "All fields are required");
   }
 
@@ -252,13 +252,13 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const updateAvatar = asyncHandler(async (req, res) => {
-  const AvatarLocalPath = req.file?.path;
+  const avatarLocalPath = req.file?.path;
 
-  if (!AvatarLocalPath) {
+  if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar Image not found");
   }
 
-  const avatar = await uploadOnCloudinary(AvatarLocalPath);
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
 
   if (!avatar || !avatar.url) {
     throw new ApiError(400, "Error While Uploading avatar Image");
@@ -416,8 +416,14 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   ]);
 
   return res
-  .status(200)
-  .json(new ApiResponse(200, userId[0]?.watchHistory || [], "Watch history fetched successfully"))
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0]?.watchHistory || [],
+        "Watch history fetched successfully"
+      )
+    );
 });
 
 export {
@@ -431,5 +437,5 @@ export {
   updateAvatar,
   updateCoverImage,
   getUserChannelProfile,
-  getWatchHistory
+  getWatchHistory,
 };
