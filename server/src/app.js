@@ -19,6 +19,8 @@ app.use(cookieParser());
 // routes import
 
 import userRoutes from "./routes/user.routes.js";
+import videoRoutes from "./routes/video.routes.js";
+
 
 // routes
 // Mount all user-related routes under "/api/v1/user".
@@ -26,5 +28,6 @@ import userRoutes from "./routes/user.routes.js";
 // (GET, POST, PUT, DELETE, etc.), not just a single GET route.
 
 app.use("/api/v1/user", userRoutes);
+app.use("/api/v1/video", videoRoutes);
 
 export { app };

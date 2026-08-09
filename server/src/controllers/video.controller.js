@@ -19,11 +19,12 @@ const getAllVideos = asyncHandler(async (req, res) => {
     matchStage.$or = [
       { description: { $regex: query, $options: "i" } },
       { videoFile: { $regex: query, $options: "i" } },
+      { title: { $regex: query, $options: "i" } },
     ];
   }
 
   if (userId) {
-      // matchStage.owner = new mongoose.Types.ObjectId(req.user?.id);  we have to use user id here which is provided by query 
+    // matchStage.owner = new mongoose.Types.ObjectId(req.user?.id);  we have to use user id here which is provided by query
     matchStage.owner = new mongoose.Types.ObjectId(userId);
   }
 
@@ -69,4 +70,50 @@ const getAllVideos = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, result, "Videos fetched successfully"));
 });
 
-export { getAllVideos };
+const publishAVideo = asyncHandler(async (req, res) => {
+  const { title, description } = req.body;
+  // TODO: get video, upload to cloudinary, create video
+
+  const videoFileLocalPath = req.files?.videoFile?.[0]?.path;
+  const thumbnailLocalPath = req.files?.thumbnail?.[0]?.path;
+
+  if (
+    !title?.trim() ||
+    !description?.trim() ||
+    !videoFileLocalPath ||
+    !thumbnailLocalPath
+  ) {
+    throw new ApiError(400, "All fields are required");
+  }
+
+  const videoFile = await uploadOnCloudinary(videoFileLocalPath);
+  const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+
+
+  if (!videoFile || !thumbnail) {
+    throw new ApiError(400, "Error while uploading video or thumbnail");
+  }
+
+  const video = await Video.create({
+    title,
+    description,
+    videoFile: videoFile.url,
+    thumbnail: thumbnail.url,
+    duration: videoFile.duration,
+    owner: req.user._id,
+  });
+
+  if (!video) {
+    throw new ApiError(500, "Something went wrong while publishing video");
+  }
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, video, "Video published successfully"));
+
+});
+
+export { 
+  getAllVideos,
+  publishAVideo
+ };

@@ -6,6 +6,11 @@ const videoSchema = new Schema(
       type: String,
       required: true,
     },
+    title:{
+      type: String,
+      required:true,
+      trim:true
+    },
     thumbnail: {
       type: String,
       required: true,
@@ -38,4 +43,4 @@ const videoSchema = new Schema(
 
 videoSchema.plugin(mongooseAggregatePaginate);
 
-export const video = mongoose.model("Video", videoSchema);
+export const Video = mongoose.model("Video", videoSchema);
