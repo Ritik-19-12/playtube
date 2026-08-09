@@ -89,7 +89,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
   const videoFile = await uploadOnCloudinary(videoFileLocalPath);
   const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
 
-
   if (!videoFile || !thumbnail) {
     throw new ApiError(400, "Error while uploading video or thumbnail");
   }
@@ -110,10 +109,30 @@ const publishAVideo = asyncHandler(async (req, res) => {
   return res
     .status(201)
     .json(new ApiResponse(201, video, "Video published successfully"));
-
 });
 
-export { 
-  getAllVideos,
-  publishAVideo
- };
+const getVideoById = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  //TODO: get video by id
+
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid!! Video id");
+  }
+
+  const video = await Video.findById(videoId).populate(
+    "owner",
+    "username fullname avatar"
+  );
+
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  return res
+  .status(200)
+  .json(
+    new ApiResponse(200,video, "Video fetched Successfully")
+  )
+});
+
+export { getAllVideos, publishAVideo , getVideoById };
