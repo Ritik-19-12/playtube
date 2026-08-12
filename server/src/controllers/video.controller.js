@@ -156,7 +156,7 @@ const addVideoView = asyncHandler(async (req, res) => {
             },
         },
         {
-            new: true,
+             returnDocument: "after",
         }
     );
 
