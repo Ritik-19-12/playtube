@@ -3,7 +3,8 @@ import {
     getAllVideos,
     publishAVideo,
     getVideoById,
-    addVideoView
+    addVideoView,
+    updateVideo
 } from "../controllers/video.controller.js"
 import {verifyJWT} from "../middleware/auth.middleware.js"
 import {upload} from "../middleware/multer.middleware.js"
@@ -31,6 +32,18 @@ router
 
 router.route("/:videoId").get(getVideoById);
 router.route("/:videoId/view").post(addVideoView);
+router
+    .route("/:videoId")
+    .get(getVideoById)
+    .patch(
+        upload.fields([
+            {
+                name: "thumbnail",
+                maxCount: 1,
+            },
+        ]),
+        updateVideo
+    );
 
 
 export default router

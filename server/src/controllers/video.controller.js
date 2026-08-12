@@ -129,62 +129,123 @@ const getVideoById = asyncHandler(async (req, res) => {
   }
 
   return res
-  .status(200)
-  .json(
-    new ApiResponse(200,video, "Video fetched Successfully")
-  )
+    .status(200)
+    .json(new ApiResponse(200, video, "Video fetched Successfully"));
 });
 
 const addVideoView = asyncHandler(async (req, res) => {
-    const { videoId } = req.params;
+  const { videoId } = req.params;
 
-    if (!isValidObjectId(videoId)) {
-        throw new ApiError(400, "Invalid!! Video id");
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid!! Video id");
+  }
+
+  const video = await Video.findById(videoId);
+
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  const updatedVideo = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $inc: {
+        views: 1,
+      },
+    },
+    {
+      returnDocument: "after",
     }
+  );
 
-    const video = await Video.findById(videoId);
+  if (!updatedVideo) {
+    throw new ApiError(500, "Something went wrong while updating video views");
+  }
 
-    if (!video) {
-        throw new ApiError(404, "Video not found");
-    }
+  await User.findByIdAndUpdate(req.user._id, {
+    $addToSet: {
+      watchHistory: videoId,
+    },
+  });
 
-    const updatedVideo = await Video.findByIdAndUpdate(
-        videoId,
-        {
-            $inc: {
-                views: 1,
-            },
-        },
-        {
-             returnDocument: "after",
-        }
-    );
-
-    if (!updatedVideo) {
-        throw new ApiError(
-            500,
-            "Something went wrong while updating video views"
-        );
-    }
-
-    await User.findByIdAndUpdate(
-        req.user._id,
-        {
-            $addToSet: {
-                watchHistory: videoId,
-            },
-        }
-    );
-
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(
-                200,
-                updatedVideo,
-                "Video view added successfully"
-            )
-        );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedVideo, "Video view added successfully"));
 });
 
-export { getAllVideos, publishAVideo , getVideoById,addVideoView };
+const updateVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  //TODO: update video details like title, description, thumbnail
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid!! Video id");
+  }
+  const video = await Video.findById(videoId);
+
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  if (!video.owner.equals(req.user._id)) {
+    throw new ApiError(403, "You are not authorized to update this video");
+  }
+
+  const { title, description } = req.body || {};
+  const thumbnailLocalpath = req.files?.thumbnail?.[0]?.path;
+
+  const updateData = {};
+
+  if (title?.trim()) {
+    updateData.title = title.trim();
+  }
+
+  if (description?.trim()) {
+    updateData.description = description.trim();
+  }
+
+  if (thumbnailLocalpath) {
+    console.log("Thumbnail path:", thumbnailLocalpath);
+    const thumbnail = await uploadOnCloudinary(thumbnailLocalpath);
+    if (!thumbnail || !thumbnail.url) {
+      throw new ApiError(500, "Error While Uploading thumbnail");
+    }
+    updateData.thumbnail = thumbnail.url;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    throw new ApiError(400, "No fields provided for update");
+  }
+
+  const updatedVideo = await Video.findByIdAndUpdate(
+    videoId,
+    {
+      $set: updateData,
+    },
+    {
+      returnDocument: "after",
+    }
+  ).select("-views");
+
+  if (!updatedVideo) {
+    throw new ApiError(500, "Something went wrong while updating video");
+  }
+
+  const fieldNames = {
+    title: "Title",
+    description: "Description",
+    thumbnail: "Thumbnail",
+  };
+
+  const updatedFields = Object.keys(updateData).map(
+    (field) => fieldNames[field]
+  );
+
+  const message = `${updatedFields.join(", ")} updated successfully`;
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedVideo, `${updatedFields.join(", ")} updated successfully`)
+    );
+});
+
+export { getAllVideos, publishAVideo, getVideoById, addVideoView, updateVideo };
