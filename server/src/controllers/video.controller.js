@@ -135,4 +135,56 @@ const getVideoById = asyncHandler(async (req, res) => {
   )
 });
 
-export { getAllVideos, publishAVideo , getVideoById };
+const addVideoView = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid!! Video id");
+    }
+
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(404, "Video not found");
+    }
+
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $inc: {
+                views: 1,
+            },
+        },
+        {
+            new: true,
+        }
+    );
+
+    if (!updatedVideo) {
+        throw new ApiError(
+            500,
+            "Something went wrong while updating video views"
+        );
+    }
+
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $addToSet: {
+                watchHistory: videoId,
+            },
+        }
+    );
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                updatedVideo,
+                "Video view added successfully"
+            )
+        );
+});
+
+export { getAllVideos, publishAVideo , getVideoById,addVideoView };
