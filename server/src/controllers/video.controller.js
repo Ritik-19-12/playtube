@@ -5,6 +5,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { v2 as cloudinary } from "cloudinary";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
@@ -244,8 +245,80 @@ const updateVideo = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, updatedVideo, `${updatedFields.join(", ")} updated successfully`)
+      new ApiResponse(
+        200,
+        updatedVideo,
+        `${updatedFields.join(", ")} updated successfully`
+      )
     );
 });
 
-export { getAllVideos, publishAVideo, getVideoById, addVideoView, updateVideo };
+const deleteVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+
+  // Check if videoId is a valid MongoDB ObjectId
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid videoId");
+  }
+
+  // Find the video
+  const video = await Video.findById(videoId);
+
+  if (!video) {
+    throw new ApiError(404, "Video not found");
+  }
+
+  // Only the owner can delete the video
+  if (!video.owner.equals(req.user._id)) {
+    throw new ApiError(403, "You are not authorized to delete this video");
+  }
+
+  // Get Cloudinary URLs
+  const videoFilePath = video.videoFile;
+  const thumbnailFilePath = video.thumbnail;
+
+  // Extract Cloudinary public IDs from URLs
+  const videoPublicId = videoFilePath.split("/").pop().split(".")[0];
+  const thumbnailPublicId = thumbnailFilePath.split("/").pop().split(".")[0];
+
+  // Delete video from Cloudinary
+  const deletedVideoFile = await cloudinary.uploader.destroy(videoPublicId, {
+    resource_type: "video",
+  });
+
+  if (deletedVideoFile.result !== "ok") {
+    throw new ApiError(500, "Error while deleting video from Cloudinary");
+  }
+
+  // Delete thumbnail from Cloudinary
+  const deletedThumbnail = await cloudinary.uploader.destroy(
+    thumbnailPublicId,
+    {
+      resource_type: "image",
+    }
+  );
+
+  if (deletedThumbnail.result !== "ok") {
+    throw new ApiError(500, "Error while deleting thumbnail from Cloudinary");
+  }
+
+  // Delete video document from MongoDB
+  const deletedVideo = await Video.findByIdAndDelete(videoId);
+
+  if (!deletedVideo) {
+    throw new ApiError(500, "Something went wrong while deleting video");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Video deleted successfully"));
+});
+
+export {
+  getAllVideos,
+  publishAVideo,
+  getVideoById,
+  addVideoView,
+  updateVideo,
+  deleteVideo,
+};
