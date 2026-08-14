@@ -22,6 +22,7 @@ import userRoutes from "./routes/user.routes.js";
 import videoRoutes from "./routes/video.routes.js";
 import healthcheckRouter from "./routes/healthcheck.routes.js";
 import commentRouter from "./routes/comment.routes.js";
+import tweetRouter from "./routes/tweet.routes.js";
 
 // routes
 // Mount all user-related routes under "/api/v1/user".
@@ -32,5 +33,6 @@ app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/video", videoRoutes);
 app.use("/api/v1/healthcheck", healthcheckRouter);
 app.use("/api/v1/comments", commentRouter);
+app.use("/api/v1/tweets", tweetRouter);
 
 export { app };
