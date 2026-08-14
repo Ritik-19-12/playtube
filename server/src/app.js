@@ -20,7 +20,7 @@ app.use(cookieParser());
 
 import userRoutes from "./routes/user.routes.js";
 import videoRoutes from "./routes/video.routes.js";
-
+import healthcheckRouter from "./routes/healthcheck.routes.js";
 
 // routes
 // Mount all user-related routes under "/api/v1/user".
@@ -29,5 +29,6 @@ import videoRoutes from "./routes/video.routes.js";
 
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/video", videoRoutes);
+app.use("/api/v1/healthcheck", healthcheckRouter);
 
 export { app };
