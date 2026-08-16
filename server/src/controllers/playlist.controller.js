@@ -69,18 +69,84 @@ const getPlaylistById = asyncHandler(async (req, res) => {
   }
   return res
     .status(200)
-    .json(
-      new ApiResponse(200, playlists, "Playlists fetched successfully")
-    );
+    .json(new ApiResponse(200, playlists, "Playlists fetched successfully"));
 });
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, videoId } = req.params;
+
+  if (!isValidObjectId(playlistId)) {
+    throw new ApiError(400, "Invalid playlistId");
+  }
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid videoId");
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new ApiError(404, "playlist not found");
+  }
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "video not found");
+  }
+
+  if (!playlist.owner.equals(req.user._id)) {
+    throw new ApiError(403, "You are not authorized to modify this playlist");
+  }
+
+  if (playlist.videos.some((id) => id.equals(videoId))) {
+    throw new ApiError(400, "Video already exists in playlist");
+  }
+
+  playlist.videos.push(videoId);
+
+  await playlist.save();
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, playlist, "Video added to playlist successfully")
+    );
 });
 
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, videoId } = req.params;
   // TODO: remove video from playlist
+
+  if (!isValidObjectId(playlistId)) {
+    throw new ApiError(400, "Invalid playlistId");
+  }
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "Invalid videoId");
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new ApiError(404, "playlist not found");
+  }
+  const video = await Video.findById(videoId);
+  if (!video) {
+    throw new ApiError(404, "video not found");
+  }
+
+  if (!playlist.owner.equals(req.user._id)) {
+    throw new ApiError(403, "You are not authorized to modify this playlist");
+  }
+
+  if (!playlist.videos.some((id) => id.equals(videoId))) {
+    throw new ApiError(404, "Video not found in playlist");
+  }
+
+  playlist.videos.pull(videoId);
+
+  await playlist.save();
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, playlist, "Video removed from playlist successfully")
+    );
 });
 
 const deletePlaylist = asyncHandler(async (req, res) => {
