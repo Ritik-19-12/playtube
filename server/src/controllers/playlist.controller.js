@@ -152,12 +152,89 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 const deletePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   // TODO: delete playlist
+
+  if (!isValidObjectId(playlistId)) {
+    throw new ApiError(400, "Invalid playlistId");
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new ApiError(404, "playlist not found");
+  }
+
+  if (!playlist.owner.equals(req.user._id)) {
+    throw new ApiError(403, "You are not authorized to delete this playlist");
+  }
+
+  const deletedPlaylist = await Playlist.findByIdAndDelete(playlistId);
+
+  if (!deletedPlaylist) {
+    throw new ApiError(500, "Something went wrong while deleting playlist");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Playlist Deleted Successfully"));
 });
 
 const updatePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { name, description } = req.body;
-  //TODO: update playlist
+
+  if (!isValidObjectId(playlistId)) {
+    throw new ApiError(400, "Invalid playlistId");
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+
+  if (!playlist) {
+    throw new ApiError(404, "Playlist not found");
+  }
+
+  if (!playlist.owner.equals(req.user._id)) {
+    throw new ApiError(403, "You are not authorized to update this playlist");
+  }
+
+  const updateData = {};
+
+  if (name?.trim()) {
+    updateData.name = name.trim();
+  }
+
+  if (description?.trim()) {
+    updateData.description = description.trim();
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    throw new ApiError(400, "No fields provided for update");
+  }
+
+  const updatedPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $set: updateData,
+    },
+    {
+      returnDocument: "after",
+    }
+  );
+
+  if (!updatedPlaylist) {
+    throw new ApiError(500, "Something went wrong while updating playlist");
+  }
+
+  const fieldNames = {
+    name: "Name",
+    description: "Description",
+  };
+
+  const updatedFields = Object.keys(updateData).map(
+    (field) => fieldNames[field]
+  );
+
+  const message = `${updatedFields.join(", ")} updated successfully`;
+
+  return res.status(200).json(new ApiResponse(200, updatedPlaylist, message));
 });
 
 export {
