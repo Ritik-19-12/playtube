@@ -8,7 +8,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 const getChannelStats = asyncHandler(async (req, res) => {
   // TODO: Get the channel stats like total video views, total subscribers, total videos, total likes etc.
-  const totalVideo = await Video.countDocuments({
+  const totalVideos = await Video.countDocuments({
     owner: req.user._id,
   });
   const totalSubscribers = await Subscription.countDocuments({
@@ -42,13 +42,8 @@ const getChannelStats = asyncHandler(async (req, res) => {
 
 const getChannelVideos = asyncHandler(async (req, res) => {
   // TODO: Get all the videos uploaded by the channel
-  const { channelId } = req.params;
-  if (!isValidObjectId(channelId)) {
-    throw new ApiError(400, "Invalid channelId");
-  }
-
   const videos = await Video.find({
-    owner: channelId,
+    owner: req.user._id,
     isPublished: true,
   });
 
